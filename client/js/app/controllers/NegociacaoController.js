@@ -5,28 +5,32 @@ class NegociacaoController {
     this._inputData = $('#data');
     this._inputQuantidade = $('#quantidade');
     this._inputValor = $('#valor');
-    this._listaNegociacoes = new ListaNegociacoes();
+    this._ordemAtual = '';
 
-    this._negociacoesView = new NegociacoesView($('#negociacoesView'));
-    this._negociacoesView.update(this._listaNegociacoes);
+    this._listaNegociacoes = new Bind(
+      new ListaNegociacoes(),
+      new NegociacoesView($('#negociacoesView')),
+      'adicionar', 'esvazia', 'ordena', 'inverteOrdem'
+    );
 
-    this._mensagem = new Mensagem();
-    this._mensagemView = new MensagemView($('#mensagemView'));
-    this._mensagemView.update(this._mensagem);
+    this._mensagem = new Bind(
+      new Mensagem(),
+      new MensagemView($('#mensagemView')),
+      'texto'
+    );
   }
 
   adicionar(event) {
     event.preventDefault();
 
-    let negociacao = this._criaNegociacao();
-
-    this._listaNegociacoes.adicionar(negociacao);
-    this._negociacoesView.update(this._listaNegociacoes);
-
-    this._mensagem.texto = 'Negociacao adicionada com sucesso';
-    this._mensagemView.update(this._mensagem); 
-    
-    this._limparFormulario();
+    try {
+      let negociacao = this._criaNegociacao();
+      this._listaNegociacoes.adicionar(negociacao);
+      this._mensagem.texto = 'Negociacao adicionada com sucesso';
+      this._limparFormulario();
+    } catch (erro) {
+      this._mensagem.texto = erro;
+    }
   }
 
   _criaNegociacao() {
@@ -41,16 +45,33 @@ class NegociacaoController {
     this._inputData.value = '';
     this._inputQuantidade.value = 1;
     this._inputValor.value = 0.0;
-
     this._inputData.focus();
   }
 
   apaga() {
-
     this._listaNegociacoes.esvazia();
-    this._negociacoesView.update(this._listaNegociacoes);
-
     this._mensagem.texto = 'Negociações apagadas com sucesso';
-    this._mensagemView.update(this._mensagem);
-}
+  }
+
+  importarNegociacoes() {
+
+    let negociacoesService = new NegociacoesService();
+    negociacoesService
+      .obterNegociacoes()
+      .then(negociacoes => {
+        negociacoes.forEach(negociacao => this._listaNegociacoes.adicionar(negociacao));
+        this._mensagem.texto = 'Negociações do período importadas com sucesso';
+      })
+      .catch(error => this._mensagem.texto = error);
+
+  }
+
+  ordena(coluna) {
+    if (this._ordemAtual == coluna) {
+      this._listaNegociacoes.inverteOrdem();
+    } else {
+      this._listaNegociacoes.ordena((a, b) => a[coluna] - b[coluna]);
+    }
+    this._ordemAtual = coluna;
+  }
 }
